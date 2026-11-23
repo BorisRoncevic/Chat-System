@@ -1,0 +1,54 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id
+  username String @unique
+  email    String @unique
+
+  memberships ConversationMember[]
+  messages    Message[]
+}
+
+model Conversation {
+  id      Int @id @default(autoincrement())
+  lastSeq Int @default(0)
+
+  members  ConversationMember[]
+  messages Message[]
+}
+
+model ConversationMember {
+  userId         String
+  conversationId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  Int
+  senderId        String
+  clientMessageId String
+  seq             Int
+  text            String
+  createdAt       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  sender User @relation(fields: [senderId], references: [id])
+
+  @@unique([conversationId, seq])
+  @@unique([conversationId, senderId, clientMessageId])
+}
