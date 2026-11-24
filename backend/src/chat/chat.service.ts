@@ -15,51 +15,97 @@ export class ChatService {
 
   async listConversations(userId: string) {
     return this.prisma.conversation.findMany({
-      where: { directKey: { not: null }, members: { some: { userId } } },
+      where: {
+        directKey: { not: null },
+        members: { some: { userId: userId } },
+      },
       select: {
         id: true,
-        members: { select: { user: { select: { id: true, username: true } } } },
-        messages: { orderBy: { seq: 'desc' }, take: 1 },
+        members: {
+          select: {
+            user: {
+              select: { id: true, username: true },
+            },
+          },
+        },
+        messages: {
+          orderBy: { seq: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { id: 'desc' },
     });
   }
 
   async createPrivateConversation(userId: string, username: unknown) {
-    if (
-      typeof username !== 'string' ||
-      !/^[a-z0-9_]{3,30}$/.test(username.trim().toLowerCase())
-    ) {
+    if (typeof username !== 'string') {
       throw new BadRequestException('Unesi korisničko ime primaoca.');
     }
+
+    const recipientUsername = username.trim().toLowerCase();
+    const usernamePattern = /^[a-z0-9_]{3,30}$/;
+
+    if (!usernamePattern.test(recipientUsername)) {
+      throw new BadRequestException('Unesi korisničko ime primaoca.');
+    }
+
     const recipient = await this.prisma.user.findUnique({
-      where: { username: username.trim().toLowerCase() },
+      where: {
+        username: recipientUsername,
+      },
     });
-    if (!recipient?.passwordHash)
+
+    if (!recipient?.passwordHash) {
       throw new NotFoundException('Korisnik nije pronađen.');
-    if (recipient.id === userId)
+    }
+
+    if (recipient.id === userId) {
       throw new BadRequestException('Izaberi drugog korisnika.');
-    const directKey = JSON.stringify([userId, recipient.id].sort());
+    }
+
+    const participantIds = [userId, recipient.id].sort();
+    const directKey = JSON.stringify(participantIds);
+
     const include = {
-      members: { select: { user: { select: { id: true, username: true } } } },
+      members: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      },
     } as const;
+
     try {
       return await this.prisma.conversation.upsert({
-        where: { directKey },
+        where: {
+          directKey: directKey,
+        },
         update: {},
         create: {
-          directKey,
-          members: { create: [{ userId }, { userId: recipient.id }] },
+          directKey: directKey,
+          members: {
+            create: [
+              { userId: userId },
+              { userId: recipient.id },
+            ],
+          },
         },
-        include,
+        include: include,
       });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
         return this.prisma.conversation.findUniqueOrThrow({
-          where: { directKey },
-          include,
+          where: {
+            directKey: directKey,
+          },
+          include: include,
         });
       }
+
       throw error;
     }
   }

@@ -3,10 +3,9 @@
 Next.js frontend i NestJS/Socket.IO backend sa PostgreSQL bazom, registracijom,
 prijavom i privatnim razgovorima između dva korisnika na backendu.
 
-**Trenutno stanje frontenda:** stranica prikazuje demo chat (`alice` / `bob`,
-razgovor 1). Ovaj demo šalje `auth.userId`, dok backend zahteva JWT sesiju.
-Za povezivanje sa ovim backendom potrebno je povezati frontend sa auth API-jem
-i slati sesijski kolačić. Ova razlika postoji nezavisno od organizacije fajlova.
+Frontend podržava registraciju, prijavu, obnovu sesije pri otvaranju stranice,
+odjavu i privatne razgovore. HTTP zahtevi šalju sesijski kolačić, a Socket.IO
+se povezuje tek nakon prijave i koristi istu sesiju.
 
 ## Organizacija koda
 
@@ -48,8 +47,11 @@ stilovi u `globals.css`. Backend ostaje organizovan po funkcionalnim modulima.
    ```
 
 5. U drugom terminalu, iz `frontend` pokreni `npm install` pa `npm run dev`.
-6. Otvori `http://localhost:3000` za demo prikaz. Backend registracija i privatni
-   razgovori dostupni su putem API-ja ispod; trenutni demo nema forme za prijavu.
+6. Otvori `http://localhost:3000` i registruj nalog. Drugi nalog napravi u
+   privatnom prozoru ili drugom browseru. Unesi korisničko ime drugog korisnika
+   u polje za novi razgovor, pa izaberi razgovor i pošalji poruku.
+7. Osvežavanje stranice obnavlja sesiju. Dugme „Odjavi se” briše sesijski kolačić
+   i prekida konekciju u trenutnom prozoru. Istek sesije vraća formu za prijavu.
 
 Backend koristi port 3001, a frontend 3000. Koristi `localhost` na obe strane.
 `FRONTEND_URL` u backendu i `NEXT_PUBLIC_API_URL` u frontendu mogu promeniti ove
@@ -101,4 +103,6 @@ Integracioni testovi zahtevaju migriranu lokalnu bazu i važeći `.env`. Prave
 jedinstveno imenovane test naloge i razgovore i brišu samo svoje podatke na kraju.
 Proveravaju JWT, privatnost HTTP/Socket.IO pristupa, duplikate, istoriju i odjavu.
 
-Iz `frontend`: `npm run lint`, `npm run typecheck` i `npm run build`.
+Iz `frontend`: `npm test`, `npm run lint`, `npm run typecheck` i `npm run build`.
+Frontend testovi proveravaju registraciju, prijavu, obnovu i istek sesije,
+odjavu, kreiranje razgovora i slanje kroz mock HTTP/Socket.IO interfejse.
