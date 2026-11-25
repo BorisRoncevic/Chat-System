@@ -229,17 +229,19 @@ integration('JWT authentication and private conversations', () => {
     const outsider = await connect(users[2].cookie);
     expect(
       await outsider.timeout(5000).emitWithAck('join-room', { conversationId }),
-    ).toHaveProperty('error');
+    ).toMatchObject({ success: false, code: 'FORBIDDEN', retryable: false });
     expect(
-      await outsider
-        .timeout(5000)
-        .emitWithAck('send-message', {
-          conversationId,
-          text: 'unauthorized',
-          clientMessageId: randomUUID(),
-          userId: users[0].id,
-        }),
-    ).toHaveProperty('error');
+      await outsider.timeout(5000).emitWithAck('send-message', {
+        conversationId,
+        text: 'unauthorized',
+        clientMessageId: randomUUID(),
+        userId: users[0].id,
+      }),
+    ).toMatchObject({
+      success: false,
+      code: 'ROOM_NOT_JOINED',
+      retryable: false,
+    });
   });
 
   it('delivers messages only to members, persists them and deduplicates retries', async () => {
@@ -266,6 +268,7 @@ integration('JWT authentication and private conversations', () => {
       .timeout(5000)
       .emitWithAck('send-message', payload);
     expect(first.success).toBe(true);
+    expect(first.clientMessageId).toBe(payload.clientMessageId);
     expect(first.message.senderId).toBe(users[0].id);
     expect((await incoming).text).toBe(payload.text);
     const retry = await sender
@@ -275,7 +278,12 @@ integration('JWT authentication and private conversations', () => {
     const conflict = await sender
       .timeout(5000)
       .emitWithAck('send-message', { ...payload, text: 'Different text' });
-    expect(conflict).toHaveProperty('error');
+    expect(conflict).toMatchObject({
+      success: false,
+      code: 'MESSAGE_CONFLICT',
+      retryable: false,
+      clientMessageId: payload.clientMessageId,
+    });
     const history = await request(app.getHttpServer())
       .get(`/conversations/${conversationId}/messages`)
       .set('Cookie', users[1].cookie)
@@ -287,7 +295,12 @@ integration('JWT authentication and private conversations', () => {
       await sender
         .timeout(5000)
         .emitWithAck('send-message', { ...payload, text: ' ' }),
-    ).toHaveProperty('error');
+    ).toMatchObject({
+      success: false,
+      code: 'INVALID_MESSAGE',
+      retryable: false,
+      clientMessageId: payload.clientMessageId,
+    });
     expect(
       await sender.timeout(5000).emitWithAck('join-room', {}),
     ).toHaveProperty('error');

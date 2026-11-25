@@ -1,0 +1,38 @@
+.authContainer {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 18px;
+  background: white;
+  border: 1px solid #d6deea;
+  border-radius: 18px;
+  padding: 32px;
+}
+
+.brand {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.fields {
+  display: grid;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  gap: 20px;
+}
+
+@media (max-width: 720px) {
+  .card {
+    padding: 24px;
+  }
+}
